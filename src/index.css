@@ -1,0 +1,72 @@
+@import './styles/variables.css';
+
+/* Tailwind-like utilities for layout (keeping it vanilla as requested) */
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flex-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.responsive-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  /* Lowered minmax slightly for smaller phones */
+  gap: 2rem;
+  width: 100%;
+  max-width: 900px;
+}
+
+.glass-card {
+  background: rgba(15, 15, 26, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.btn-primary {
+  background: transparent;
+  border: 1px solid var(--color-accent);
+  color: var(--color-accent);
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 10px transparent;
+}
+
+.btn-primary:hover {
+  background: var(--color-accent);
+  color: var(--color-bg-deep);
+  box-shadow: 0 0 15px var(--color-accent-glow);
+}
+
+.title-glow {
+  text-shadow: 0 0 20px var(--color-accent-glow);
+}
+
+/* Mobile Adjustments */
+@media (max-width: 600px) {
+  .responsive-grid {
+    gap: 1.5rem;
+    grid-template-columns: 1fr;
+    /* Force 1 column on mobile */
+  }
+
+  .glass-card {
+    padding: 1.5rem !important;
+    /* Force tighter padding on mobile */
+  }
+
+  h1 {
+    font-size: 2rem !important;
+  }
+
+  /* Adjust button sizes for touch targets if needed, but default is usually fine */
+}

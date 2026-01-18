@@ -1,0 +1,26 @@
+:root {
+  /* Dark Premium Palette */
+  --color-bg-deep: #050510; /* Deep Black/Navy */
+  --color-bg-card: #0F0F1A; /* Slightly lighter card bg */
+  --color-text-primary: #E0E0E0;
+  --color-text-secondary: #9CA3AF;
+  --color-accent: #00F0FF; /* Neon Blue */
+  --color-accent-glow: rgba(0, 240, 255, 0.4);
+  --color-border: rgba(255, 255, 255, 0.08);
+
+  /* Typography */
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+
+  /* Spacing & Radius */
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+  --spacing-md: 1.5rem;
+}
+
+body {
+  background-color: var(--color-bg-deep);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+}
