@@ -1,79 +1,76 @@
-import { useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocalStorage } from './useLocalStorage';
 import { format } from 'date-fns';
 
 export const useStopwatch = () => {
-    // Current elapsed time in seconds (persisted)
-    const [elapsedTime, setElapsedTime] = useLocalStorage<number>('productivity-stopwatch-time', 0);
-    const [isRunning, setIsRunning] = useLocalStorage<boolean>('productivity-stopwatch-running', false);
-    const [lastStartTime, setLastStartTime] = useLocalStorage<number | null>('productivity-stopwatch-start-time', null);
+    // Total accumulated time from PREVIOUS sessions (in seconds)
+    const [accumulatedTime, setAccumulatedTime] = useLocalStorage<number>('productivity-stopwatch-accumulated', 0);
+    // Timestamp when the current session started (null if paused)
+    const [startTime, setStartTime] = useLocalStorage<number | null>('productivity-stopwatch-start-timestamp', null);
 
-    // Daily Records: { "2023-10-27": 120 (minutes), ... }
+    // Derived state for UI rendering
+    const [displayTime, setDisplayTime] = useState(accumulatedTime);
+
     const [dailyRecords, setDailyRecords] = useLocalStorage<Record<string, number>>('productivity-daily-records', {});
 
-    const intervalRef = useRef<number | null>(null);
-
-    // Sync time on mount if it was running (handles refreshing/closing tab)
     useEffect(() => {
-        if (isRunning && lastStartTime) {
-            const now = Date.now();
-            const additionalSeconds = Math.floor((now - lastStartTime) / 1000);
+        let interval: number;
 
-            // Avoid double counting if the effect runs multiple times strictly, 
-            // but for simple logic: update elapsed + restart interval
-            // Better approach: stored 'elapsed' is only the committed blocks. 
-            // Current total = stored_elapsed + (now - start_time)
-            // But we want to just resume ticking from the correct visual point.
+        if (startTime) {
+            // Immediate update
+            const update = () => {
+                const now = Date.now();
+                const currentSessionSeconds = Math.floor((now - startTime) / 1000);
+                setDisplayTime(accumulatedTime + currentSessionSeconds);
+            };
 
-            // To be precise: update elapsed time to include the time passed while closed?
-            // "Stopwatch time should automatically continue... when reopened". 
-            // Yes, acts like a real stopwatch running in background.
-            setElapsedTime((prev) => prev + additionalSeconds);
-            setLastStartTime(now); // Reset start marker to now
-        }
-    }, []); // Run once on mount
-
-    useEffect(() => {
-        if (isRunning) {
-            intervalRef.current = window.setInterval(() => {
-                setElapsedTime((prev) => prev + 1);
-                // Update last start time every second effectively to check drift? 
-                // No, just updating elapsed is fine for 'live' view.
-                // We should update lastStartTime roughly to keep sync if we crash.
-                setLastStartTime(Date.now());
-            }, 1000);
+            update();
+            interval = window.setInterval(update, 200); // Update freq independently of count
         } else {
-            if (intervalRef.current) clearInterval(intervalRef.current);
-            setLastStartTime(null);
+            // If paused, display just the accumulated
+            setDisplayTime(accumulatedTime);
         }
+
         return () => {
-            if (intervalRef.current) clearInterval(intervalRef.current);
+            if (interval) clearInterval(interval);
         };
-    }, [isRunning, setElapsedTime, setLastStartTime]);
+    }, [startTime, accumulatedTime]);
 
     const startStopwatch = () => {
-        setIsRunning(true);
-        setLastStartTime(Date.now());
+        if (!startTime) {
+            setStartTime(Date.now());
+        }
     };
 
     const pauseStopwatch = () => {
-        setIsRunning(false);
-        setLastStartTime(null);
+        if (startTime) {
+            const now = Date.now();
+            const sessionSeconds = Math.floor((now - startTime) / 1000);
+            setAccumulatedTime((prev) => prev + sessionSeconds);
+            setStartTime(null);
+        }
     };
 
     const finishForToday = () => {
-        setIsRunning(false);
-        setLastStartTime(null);
+        // Calculate total time
+        let totalSeconds = accumulatedTime;
+        if (startTime) {
+            const now = Date.now();
+            totalSeconds += Math.floor((now - startTime) / 1000);
+        }
 
         const todayKey = format(new Date(), 'yyyy-MM-dd');
-        const minutesWorked = Math.floor(elapsedTime / 60);
+        const minutesWorked = Math.floor(totalSeconds / 60);
 
         setDailyRecords((prev) => ({
             ...prev,
             [todayKey]: (prev[todayKey] || 0) + minutesWorked
         }));
 
-        setElapsedTime(0); // Reset for next day (or just reset for today effectively)
+        // Reset everything
+        setAccumulatedTime(0);
+        setStartTime(null);
+        setDisplayTime(0);
     };
 
     const formatTime = (seconds: number) => {
@@ -83,21 +80,13 @@ export const useStopwatch = () => {
         return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     };
 
-    // Weekly Logic Helper
-    const getWeeklyData = () => {
-        // This is a simplified logic. In a real app we'd parse dates.
-        // Returns last 7 days keys or specific logic for "Monday-Sunday"
-        return dailyRecords;
-    };
-
     return {
-        elapsedTime,
-        isRunning,
+        elapsedTime: displayTime, // Exposing as elapsedTime to keep API compatible
+        isRunning: !!startTime,
         startStopwatch,
         pauseStopwatch,
         finishForToday,
         formatTime,
-        dailyRecords,
-        getWeeklyData
+        dailyRecords
     };
 };
